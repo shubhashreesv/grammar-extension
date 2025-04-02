@@ -4,24 +4,36 @@ document.addEventListener("DOMContentLoaded", async function () {
         document.getElementById("originalText").textContent = text;
 
         if (text !== "No text selected.") {
-            let response = await fetch("https://api.languagetool.org/v2/check", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: `text=${encodeURIComponent(text)}&language=en-US`
-            });
-
-            let result = await response.json();
-            let highlightedText = text;
-
-            if (result.matches.length > 0) {
-                result.matches.forEach(match => {
-                    let errorText = text.substring(match.offset, match.offset + match.length);
-                    let tooltip = `<span class='highlight' title='${match.message}'>${errorText}</span>`;
-                    highlightedText = highlightedText.replace(errorText, tooltip);
+            try {
+                let response = await fetch("https://api.languagetool.org/v2/check", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `text=${encodeURIComponent(text)}&language=en-US`
                 });
-                document.getElementById("results").innerHTML = highlightedText;
-            } else {
-                document.getElementById("results").innerHTML = "<p class='no-issues'>No issues found!</p>";
+
+                let result = await response.json();
+                let modifiedText = text.split(""); 
+
+                if (result.matches.length > 0) {
+                    result.matches.forEach(match => {
+                        let start = match.offset;
+                        let end = start + match.length;
+                        let errorText = text.substring(start, end);
+                        let tooltip = `<span class='highlight' title='${match.message}'>${errorText}</span>`;
+
+                        modifiedText[start] = tooltip;
+                        for (let i = start + 1; i < end; i++) {
+                            modifiedText[i] = ""; 
+                        }
+                    });
+
+                    document.getElementById("results").innerHTML = modifiedText.join(""); 
+                } else {
+                    document.getElementById("results").innerHTML = "<p class='no-issues'>No issues found!</p>";
+                }
+            } catch (error) {
+                console.error("Error fetching LanguageTool API:", error);
+                document.getElementById("results").innerHTML = "<p style='color: red;'>Error fetching results.</p>";
             }
         }
     });
